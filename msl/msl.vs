@@ -185,10 +185,10 @@ final class Printer {
         head += "struct Globals {\n"
         for v in m.Variables {
             if v.Storage == .local || v.Storage == .constant { continue }
-            if v.Type.IsSampler { continue }
+            if v.Type.IsSampler || lazy(v) { continue }
             head += "    \(try type(v.Type)) \(fieldName(v));\n"
         }
-        head += "    float dfdySign;\n};\n\n"
+        head += "    float dfdySign;\n    constant uint* U;\n};\n\n"
         // Textures and samplers can't be assigned, so they travel in a
         // struct of their own, made once in the entry point.
         head += "struct Tex {\n"
@@ -267,7 +267,7 @@ final class Printer {
             s += "};\n\n"
             s += "vertex VOut vmain(VIn in [[stage_in]], constant uint* U [[buffer(30)]], constant K& k [[buffer(29)]],\n"
             s += "                  uint vid [[vertex_id]], uint iid [[instance_id]]\(textureParams())) {\n"
-            s += "    Globals G;\n    G.dfdySign = k.dfdySign;\n"
+            s += "    Globals G;\n    G.dfdySign = k.dfdySign;\n    G.U = U;\n"
             for v in inputs {
                 if v.Type.IsMatrix {
                     var cols: [string] = []
@@ -289,7 +289,7 @@ final class Printer {
             s += "};\n\n"
             s += "fragment FOut fmain(FIn in [[stage_in]], constant uint* U [[buffer(30)]], constant K& k [[buffer(29)]],\n"
             s += "                    bool front [[front_facing]], float2 pointCoord [[point_coord]]\(textureParams())) {\n"
-            s += "    Globals G;\n    G.dfdySign = k.dfdySign;\n"
+            s += "    Globals G;\n    G.dfdySign = k.dfdySign;\n    G.U = U;\n"
             for v in inputs { s += "    \(name(v)) = in.\(fieldName(v));\n" }
             for v in m.Variables {
                 if isBuiltin(v, .fragCoord) {
@@ -307,7 +307,7 @@ final class Printer {
         for slot in samplers { texArgs += ["t\(slot.Slot)", "s\(slot.Slot)"] }
         if texArgs.isEmpty { texArgs = ["0"] }
         s += "    Tex T{\(texArgs.joined(separator: ", "))};\n"
-        for v in m.Variables where v.Storage == .uniform && !v.Type.IsSampler {
+        for v in m.Variables where v.Storage == .uniform && !v.Type.IsSampler && !lazy(v) {
             guard v.Index < offsets.count else { throw TranslateError("no uniform offset for \(v.Name)") }
             s += try loadUniform(name(v), v.Type, offsets[v.Index], indent: "    ")
         }
@@ -377,29 +377,65 @@ final class Printer {
         return s
     }
 
-    /// Code that loads a uniform of `t` at slot `o` into `dst`.
-    func loadUniform(_ dst: string, _ t: shader.DataType, _ o: int, indent ind: string) throws -> string {
+    /// Whether a uniform is read from the uniform slots where it's used,
+    /// not copied in when the stage starts: arrays of numbers, vectors and
+    /// matrices (a bone palette copied for every vertex is most of a
+    /// skinned draw's time).
+    func lazy(_ v: shader.Variable) -> bool {
+        return v.Storage == .uniform && v.Type.IsArray && !v.Type.IsSampler && !v.Type.Element.IsStruct
+    }
+
+    /// The name of a helper reading lazy uniform v's element i from U
+    /// (whole: the whole array).
+    func lazyHelper(_ v: shader.Variable, whole: bool) throws -> string {
+        let n = "u\(whole ? "all" : "at")\(v.Index)"
+        if helperNames.contains(n) { return n }
+        helperNames.append(n)
+        guard v.Index < offsets.count else { throw TranslateError("no uniform offset for \(v.Name)") }
+        let e = v.Type.Element
+        let w = m.Slots(e)
+        let et = try elemType(e)
+        if whole {
+            var s = "static \(try type(v.Type)) \(n)(constant uint* U) {\n    \(try type(v.Type)) r;\n"
+            s += "    for (int i = 0; i < \(v.Type.ArrayCount); i++) {\n        int o = \(offsets[v.Index]) + i * \(w);\n"
+            s += try loadUniform("r[i]", e, 0, indent: "        ", base: "o")
+            s += "    }\n    return r;\n}\n"
+            helpers.append(s)
+        } else {
+            var s = "static \(et) \(n)(constant uint* U, int i) {\n    \(et) r;\n"
+            s += "    int o = \(offsets[v.Index]) + clamp(i, 0, \(v.Type.ArrayCount - 1)) * \(w);\n"
+            s += try loadUniform("r", e, 0, indent: "    ", base: "o")
+            s += "    return r;\n}\n"
+            helpers.append(s)
+        }
+        return n
+    }
+
+    /// Code that loads a uniform of `t` at slot `o` into `dst` (slot
+    /// `base + o` when base names a variable holding one).
+    func loadUniform(_ dst: string, _ t: shader.DataType, _ o: int, indent ind: string, base: string = "") throws -> string {
         if t.IsArray {
             var s = ""
             let w = m.Slots(t.Element)
-            for i in 0..<t.ArrayCount { s += try loadUniform("\(dst)[\(i)]", t.Element, o + i * w, indent: ind) }
+            for i in 0..<t.ArrayCount { s += try loadUniform("\(dst)[\(i)]", t.Element, o + i * w, indent: ind, base: base) }
             return s
         }
         if case .structure(let st) = t.Kind {
             var s = ""
             var at = o
             for (k, f) in m.Structs[st].Fields.enumerated() {
-                s += try loadUniform("\(dst).f\(k)", f.Type, at, indent: ind)
+                s += try loadUniform("\(dst).f\(k)", f.Type, at, indent: ind, base: base)
                 at += m.Slots(f.Type)
             }
             return s
         }
         func comp(_ i: int) -> string {
+            let at = base.isEmpty ? "\(o + i)" : "\(base) + \(o + i)"
             switch t.Kind {
-            case .float: return "as_type<float>(U[\(o + i)])"
-            case .int: return "as_type<int>(U[\(o + i)])"
-            case .bool: return "(U[\(o + i)] != 0u)"
-            default: return "U[\(o + i)]"
+            case .float: return "as_type<float>(U[\(at)])"
+            case .int: return "as_type<int>(U[\(at)])"
+            case .bool: return "(U[\(at)] != 0u)"
+            default: return "U[\(at)]"
             }
         }
         if t.IsMatrix {

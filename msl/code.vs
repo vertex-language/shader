@@ -149,6 +149,7 @@ extension Printer {
             let v = m.Variables[e.Index]
             if v.Storage == .constant { return "c\(v.Index)_\(clean(v.Name))" }
             if v.Type.IsSampler { throw TranslateError("a sampler used as a value") }
+            if lazy(v) { return "\(try lazyHelper(v, whole: true))(G.U)" }
             return name(v)
         case .swizzle:
             let letters: [string] = ["x", "y", "z", "w"]
@@ -159,6 +160,9 @@ extension Printer {
             if e.Args[0].Type.IsScalar { return e.Components.count == 1 ? base : "\(try type(e.Type))(\(base))" }
             return "(\(base)).\(s)"
         case .index:
+            if case .variable = e.Args[0].Op, lazy(m.Variables[e.Args[0].Index]) {
+                return "\(try lazyHelper(m.Variables[e.Args[0].Index], whole: false))(G.U, int(\(try expr(e.Args[1]))))"
+            }
             return "(\(try expr(e.Args[0])))[\(try expr(e.Args[1]))]"
         case .field:
             return "(\(try expr(e.Args[0]))).f\(e.Index)"
