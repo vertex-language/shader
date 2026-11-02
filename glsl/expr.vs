@@ -63,7 +63,7 @@ extension Parser {
     }
 
     /// The operator `text` names and its precedence (vsc_TODO #46: a struct, not a tuple).
-    static func binaryOp(_ text: string) -> OperatorInfo? {
+    static func binaryOp(text: string) -> OperatorInfo? {
         switch text {
         case "||": return OperatorInfo(.logicalOr, 1)
         case "^^": return OperatorInfo(.logicalXor, 2)
@@ -88,7 +88,7 @@ extension Parser {
         }
     }
 
-    func binary(_ minPrec: int) throws -> shader.Expr {
+    func binary(minPrec: int) throws -> shader.Expr {
         var left = try unary()
         while true {
             let t = peek()
@@ -149,7 +149,7 @@ extension Parser {
         return try postfix()
     }
 
-    func checkIncrementable(_ e: shader.Expr) throws {
+    func checkIncrementable(e: shader.Expr) throws {
         if !e.Type.IsNumeric || e.Type.Kind == .bool || e.Type.IsArray { throw fail("++ and -- need a number") }
     }
 
@@ -285,7 +285,7 @@ extension Parser {
 
     // MARK: calls
 
-    func call(_ name: string, _ args: [shader.Expr], line: int) throws -> shader.Expr {
+    func call(name: string, args: [shader.Expr], line: int) throws -> shader.Expr {
         // A user function first: in 1.00 one may hide a built-in.
         if case .functions(let fs)? = lookup(name) {
             for i in fs {
@@ -316,17 +316,17 @@ extension Parser {
         return shader.Expr(.builtin(r.Fn), r.Result, args)
     }
 
-    func lookupBuiltin(_ name: string, _ args: [shader.Expr]) -> Resolved? {
+    func lookupBuiltin(name: string, args: [shader.Expr]) -> Resolved? {
         resolveBuiltin(name, args.map { $0.Type }, fragment: fragment, version: version, extensions: extensions)
     }
 
-    func isBuiltinName(_ name: string) -> bool {
+    func isBuiltinName(name: string) -> bool {
         builtinNames.contains(name)
     }
 
     // MARK: constructors
 
-    func construct(_ t: shader.DataType, _ args: [shader.Expr]) throws -> shader.Expr {
+    func construct(t: shader.DataType, args: [shader.Expr]) throws -> shader.Expr {
         if args.isEmpty { throw fail("a constructor needs arguments") }
         if t.IsArray {
             if args.count != t.ArrayCount { throw fail("array constructor of \(t.ArrayCount) given \(args.count) values") }
@@ -371,7 +371,7 @@ extension Parser {
 
     // MARK: members and indexing
 
-    func member(_ e: shader.Expr, _ name: string) throws -> shader.Expr {
+    func member(e: shader.Expr, name: string) throws -> shader.Expr {
         if case .structure(let s) = e.Type.Kind, !e.Type.IsArray {
             let fields = module.Structs[s].Fields
             guard let k = fields.firstIndex(where: { $0.Name == name }) else { throw fail("struct has no field \(name)") }
@@ -403,7 +403,7 @@ extension Parser {
         return fold(s)
     }
 
-    func foldField(_ f: shader.Expr) -> shader.Expr {
+    func foldField(f: shader.Expr) -> shader.Expr {
         let base = f.Args[0]
         if !base.IsConstant { return f }
         guard case .structure(let s) = base.Type.Kind else { return f }
@@ -414,7 +414,7 @@ extension Parser {
         return shader.Expr.Constant(f.Type, Array(base.Value[offset..<offset + width]))
     }
 
-    func index(_ e: shader.Expr, _ i: shader.Expr) throws -> shader.Expr {
+    func index(e: shader.Expr, i: shader.Expr) throws -> shader.Expr {
         if i.Type != .Int && i.Type != .Uint { throw fail("an index must be an integer") }
         var result: shader.DataType
         var size: int
@@ -447,7 +447,7 @@ extension Parser {
 
     // MARK: lvalues
 
-    func checkLvalue(_ e: shader.Expr) throws {
+    func checkLvalue(e: shader.Expr) throws {
         switch e.Op {
         case .variable:
             let v = module.Variables[e.Index]
@@ -485,14 +485,14 @@ struct OperatorInfo {
     let Op: shader.BinaryOp
     let Precedence: int
 
-    init(_ op: shader.BinaryOp, _ precedence: int) {
+    init(op: shader.BinaryOp, precedence: int) {
         Op = op
         Precedence = precedence
     }
 }
 
 /// The result type of `a op b`, or nil when GLSL doesn't allow it.
-func binaryType(_ op: shader.BinaryOp, _ a: shader.DataType, _ b: shader.DataType) -> shader.DataType? {
+func binaryType(op: shader.BinaryOp, a: shader.DataType, b: shader.DataType) -> shader.DataType? {
     if a.IsArray || b.IsArray || a.IsSampler || b.IsSampler {
         if (op == .equal || op == .notEqual) && a == b && !a.IsSampler { return .Bool }
         return nil

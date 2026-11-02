@@ -46,11 +46,11 @@ final class Preprocessor {
         self.supported = supported
     }
 
-    func define(_ name: string, _ value: string, line: int = 0) {
+    func define(name: string, value: string, line: int = 0) {
         macros[name] = Macro(name: name, params: nil, body: [Token(.intLiteral, value, line: line)])
     }
 
-    func run(_ source: string) throws -> Preprocessed {
+    func run(source: string) throws -> Preprocessed {
         let tokens = try lex(source)
         define("GL_ES", "1")
         define("__FILE__", "0")
@@ -111,7 +111,7 @@ final class Preprocessor {
         return out
     }
 
-    func directive(_ l: [Token], _ stack: inout [Conditional]) throws {
+    func directive(l: [Token], stack: inout [Conditional]) throws {
         let line = l[0].Line
         if l.count == 1 { return }   // a null directive
         let name = l[1].Text
@@ -180,7 +180,7 @@ final class Preprocessor {
         }
     }
 
-    func defineDirective(_ rest: [Token], line: int) throws {
+    func defineDirective(rest: [Token], line: int) throws {
         guard let n = rest.first, n.Kind == .identifier else { throw CompileError(line: line, "#define needs a name") }
         if n.Text.hasPrefix("GL_") { throw CompileError(line: line, "macro names beginning GL_ are reserved") }
         var params: [string]? = nil
@@ -202,7 +202,7 @@ final class Preprocessor {
 
     /// Macro expansion of `tokens`, with `hidden` (the macros being
     /// expanded) left alone, so a macro can't expand itself.
-    func expand(_ tokens: [Token], _ hidden: [string]) throws -> [Token] {
+    func expand(tokens: [Token], hidden: [string]) throws -> [Token] {
         var out: [Token] = []
         var i = 0
         while i < tokens.count {
@@ -269,13 +269,13 @@ final class Preprocessor {
     }
 
     /// A macro body's tokens, placed on the line it's used on.
-    func relined(_ body: [Token], _ line: int) -> [Token] {
+    func relined(body: [Token], line: int) -> [Token] {
         body.map { Token($0.Kind, $0.Text, line: line, spaced: $0.Spaced) }
     }
 
     // MARK: #if expressions
 
-    func evaluate(_ tokens: [Token], line: int) throws -> int {
+    func evaluate(tokens: [Token], line: int) throws -> int {
         // `defined X` and `defined(X)` before expansion.
         var resolved: [Token] = []
         var i = 0
@@ -332,7 +332,7 @@ struct ConstExprParser {
         return c
     }
 
-    static func precedence(_ op: string) -> int {
+    static func precedence(op: string) -> int {
         switch op {
         case "||": return 1
         case "&&": return 2
@@ -348,7 +348,7 @@ struct ConstExprParser {
         }
     }
 
-    mutating func binary(_ minPrec: int) throws -> int {
+    mutating func binary(minPrec: int) throws -> int {
         var left = try unary()
         while true {
             let op = peek()
@@ -419,7 +419,7 @@ struct ConstExprParser {
 }
 
 /// A decimal, octal (leading 0) or hexadecimal integer literal, without its u suffix.
-func parseIntLiteral(_ text: string) -> int? {
+func parseIntLiteral(text: string) -> int? {
     var t = text
     if t.hasSuffix("u") || t.hasSuffix("U") { t = string(t.dropLast()) }
     if t.hasPrefix("0x") || t.hasPrefix("0X") { return int(string(t.dropFirst(2)), radix: 16) }

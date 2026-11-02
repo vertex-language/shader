@@ -7,10 +7,10 @@ import (
 
 extension Machine {
     /// Carries out one non-control instruction for the lanes in `mask`.
-    func execute(_ i: Instr, _ mask: uint64, _ f: UnsafeMutablePointer<float32>) {
+    func execute(i: Instr, mask: uint64, f: UnsafeMutablePointer<float32>) {
         let L = Lanes
         let all = mask == full
-        func on(_ l: int) -> bool { all || (mask >> uint64(l)) & 1 != 0 }
+        func on(l: int) -> bool { all || (mask >> uint64(l)) & 1 != 0 }
         switch i.Op {
         case .mov:
             for k in 0..<i.N {
@@ -263,7 +263,7 @@ extension Machine {
         }
     }
 
-    func unary(_ i: Instr, _ mask: uint64, _ op: (uint32) -> uint32) {
+    func unary(i: Instr, mask: uint64, op: (uint32) -> uint32) {
         let L = Lanes
         for k in 0..<i.N {
             let d = (i.Dst + k) * L
@@ -272,7 +272,7 @@ extension Machine {
         }
     }
 
-    func binaryBits(_ i: Instr, _ mask: uint64, _ op: (uint32, uint32) -> uint32) {
+    func binaryBits(i: Instr, mask: uint64, op: (uint32, uint32) -> uint32) {
         let L = Lanes
         for k in 0..<i.N {
             let d = (i.Dst + k) * L
@@ -284,14 +284,14 @@ extension Machine {
 
     // MARK: geometry and matrices
 
-    func geometry(_ i: Instr, _ mask: uint64, _ f: UnsafeMutablePointer<float32>) {
+    func geometry(i: Instr, mask: uint64, f: UnsafeMutablePointer<float32>) {
         let L = Lanes
         let n = i.Aux
         for l in 0..<L where mask & (uint64(1) << uint64(l)) != 0 {
-            func a(_ k: int) -> float32 { f[(i.A + k) * L + l] }
-            func b(_ k: int) -> float32 { f[(i.B + k) * L + l] }
-            func c(_ k: int) -> float32 { f[(i.C + k) * L + l] }
-            func set(_ k: int, _ v: float32) { f[(i.Dst + k) * L + l] = v }
+            func a(k: int) -> float32 { f[(i.A + k) * L + l] }
+            func b(k: int) -> float32 { f[(i.B + k) * L + l] }
+            func c(k: int) -> float32 { f[(i.C + k) * L + l] }
+            func set(k: int, v: float32) { f[(i.Dst + k) * L + l] = v }
             switch i.Op {
             case .dot:
                 var s: float32 = 0
@@ -343,7 +343,7 @@ extension Machine {
         }
     }
 
-    func matrixInverse(_ i: Instr, _ mask: uint64, _ f: UnsafeMutablePointer<float32>) {
+    func matrixInverse(i: Instr, mask: uint64, f: UnsafeMutablePointer<float32>) {
         let L = Lanes
         let n = i.Aux
         for l in 0..<L where mask & (uint64(1) << uint64(l)) != 0 {
@@ -384,7 +384,7 @@ extension Machine {
     // MARK: derivatives
 
     /// Lanes come in quads: 0 (x, y), 1 (x+1, y), 2 (x, y+1), 3 (x+1, y+1).
-    func derivative(_ i: Instr, _ f: UnsafeMutablePointer<float32>) {
+    func derivative(i: Instr, f: UnsafeMutablePointer<float32>) {
         let L = Lanes
         for k in 0..<i.N {
             let a = (i.A + k) * L
@@ -417,7 +417,7 @@ extension Machine {
 
     // MARK: textures
 
-    func sample(_ i: Instr, _ mask: uint64, _ f: UnsafeMutablePointer<float32>) {
+    func sample(i: Instr, mask: uint64, f: UnsafeMutablePointer<float32>) {
         let L = Lanes
         // Locals, so the loops below touch no reference counts.
         let req = request
@@ -482,7 +482,7 @@ extension Machine {
         }
     }
 
-    func fetch(_ i: Instr, _ mask: uint64) {
+    func fetch(i: Instr, mask: uint64) {
         let L = Lanes
         request.Lanes = L
         request.Mask = mask
@@ -503,7 +503,7 @@ extension Machine {
 }
 
 /// The coordinates a sampler kind reads (before projection).
-func coordWidth(_ k: shader.SamplerKind) -> int {
+func coordWidth(k: shader.SamplerKind) -> int {
     switch k {
     case .texture2D, .external, .itexture2D, .utexture2D: return 2
     case .texture3D, .cube, .array2D, .shadow2D: return 3
@@ -513,7 +513,7 @@ func coordWidth(_ k: shader.SamplerKind) -> int {
 
 // MARK: math
 
-func math1(_ fn: shader.Function, _ x: float32) -> float32 {
+func math1(fn: shader.Function, x: float32) -> float32 {
     switch fn {
     case .radians: return x * float32(math.Pi / 180)
     case .degrees: return x * float32(180 / math.Pi)
@@ -547,7 +547,7 @@ func math1(_ fn: shader.Function, _ x: float32) -> float32 {
     }
 }
 
-func math2(_ fn: shader.Function, _ a: float32, _ b: float32) -> float32 {
+func math2(fn: shader.Function, a: float32, b: float32) -> float32 {
     switch fn {
     case .pow: return math.Pow(a, b)
     case .atan2: return math.Atan2(a, b)
@@ -559,7 +559,7 @@ func math2(_ fn: shader.Function, _ a: float32, _ b: float32) -> float32 {
     }
 }
 
-func math3(_ fn: shader.Function, _ a: float32, _ b: float32, _ c: float32) -> float32 {
+func math3(fn: shader.Function, a: float32, b: float32, c: float32) -> float32 {
     switch fn {
     case .clamp: return min(max(a, b), c)
     case .mix: return a * (1 - c) + b * c
@@ -570,7 +570,7 @@ func math3(_ fn: shader.Function, _ a: float32, _ b: float32, _ c: float32) -> f
     }
 }
 
-func pack2x16(_ op: Op, _ v: float32) -> uint32 {
+func pack2x16(op: Op, v: float32) -> uint32 {
     switch op {
     case .packSnorm2x16:
         let c = (min(max(v, -1), 1) * 32767).rounded(.toNearestOrEven)
@@ -582,7 +582,7 @@ func pack2x16(_ op: Op, _ v: float32) -> uint32 {
     }
 }
 
-func unpack2x16(_ op: Op, _ v: uint32) -> float32 {
+func unpack2x16(op: Op, v: uint32) -> float32 {
     switch op {
     case .unpackSnorm2x16:
         let s = int16(bitPattern: uint16(v))

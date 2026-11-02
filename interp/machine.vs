@@ -55,9 +55,9 @@ public final class SampleRequest {
 
 /// Where a machine's texture lookups go: the pipeline's bound textures.
 public protocol Textures: AnyObject {
-    func Sample(_ r: SampleRequest)
+    func Sample(r: SampleRequest)
     /// texelFetch: integer coordinates and a level, per lane.
-    func Fetch(_ r: SampleRequest)
+    func Fetch(r: SampleRequest)
     /// textureSize: a texture's size at a level.
     func Size(unit: int, sampler: shader.SamplerKind, level: int) -> [int32]
 }
@@ -65,8 +65,8 @@ public protocol Textures: AnyObject {
 /// Textures that aren't there: every lookup is transparent black.
 public final class NoTextures: Textures {
     public init() {}
-    public func Sample(_ r: SampleRequest) {}
-    public func Fetch(_ r: SampleRequest) {}
+    public func Sample(r: SampleRequest) {}
+    public func Fetch(r: SampleRequest) {}
     public func Size(unit: int, sampler: shader.SamplerKind, level: int) -> [int32] { [0, 0, 0] }
 }
 
@@ -89,7 +89,7 @@ struct Frame {
     /// switch: lanes no case value matches.
     var dflt: uint64 = 0
 
-    init(_ kind: FrameKind, entry: uint64) {
+    init(kind: FrameKind, entry: uint64) {
         self.kind = kind
         self.entry = entry
     }
@@ -107,7 +107,7 @@ public final class Machine {
     var frames: [Frame] = []
     let request: SampleRequest
 
-    public init(_ exe: Executable, lanes: int, textures: any Textures = NoTextures()) {
+    public init(exe: Executable, lanes: int, textures: any Textures = NoTextures()) {
         Exe = exe
         Lanes = max(1, min(64, lanes))
         Textures = textures
@@ -126,13 +126,13 @@ public final class Machine {
     // MARK: slots
 
     /// Slot `s` of `lane`, as bits.
-    public func Get(_ s: int, lane: int) -> uint32 { p[s * Lanes + lane] }
-    public func Set(_ s: int, lane: int, _ v: uint32) { p[s * Lanes + lane] = v }
-    public func GetFloat(_ s: int, lane: int) -> float32 { float32(bitPattern: p[s * Lanes + lane]) }
-    public func SetFloat(_ s: int, lane: int, _ v: float32) { p[s * Lanes + lane] = v.bitPattern }
+    public func Get(s: int, lane: int) -> uint32 { p[s * Lanes + lane] }
+    public func Set(s: int, lane: int, v: uint32) { p[s * Lanes + lane] = v }
+    public func GetFloat(s: int, lane: int) -> float32 { float32(bitPattern: p[s * Lanes + lane]) }
+    public func SetFloat(s: int, lane: int, v: float32) { p[s * Lanes + lane] = v.bitPattern }
 
     /// Sets slot `s` in every lane (uniforms, constants).
-    public func Set(_ s: int, all v: uint32) {
+    public func Set(s: int, all v: uint32) {
         let base = s * Lanes
         for l in 0..<Lanes { p[base + l] = v }
     }
@@ -144,7 +144,7 @@ public final class Machine {
 
     /// Runs the shader for the lanes in `active`; returns the lanes still
     /// alive at the end (the rest discarded).
-    public func Run(_ active: uint64) -> uint64 {
+    public func Run(active: uint64) -> uint64 {
         frames.removeAll(keepingCapacity: true)
         var mask = active & full
         var disabled: uint64 = 0
@@ -270,7 +270,7 @@ public final class Machine {
         return (active & full) & ~killed
     }
 
-    func innermost(_ kind: FrameKind) -> int {
+    func innermost(kind: FrameKind) -> int {
         var k = frames.count - 1
         while k >= 0 {
             if frames[k].kind == kind { return k }
@@ -289,7 +289,7 @@ public final class Machine {
     }
 
     /// The lanes of `mask` where slot `s` is true (nonzero).
-    func laneMask(_ s: int, _ mask: uint64) -> uint64 {
+    func laneMask(s: int, mask: uint64) -> uint64 {
         var out: uint64 = 0
         let base = s * Lanes
         for l in 0..<Lanes where mask & (uint64(1) << uint64(l)) != 0 {

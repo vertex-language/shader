@@ -117,7 +117,7 @@ public struct Instr {
     /// For math1, math2 and math3: which function.
     public var Fn: shader.Function = .sin
 
-    public init(_ op: Op) {
+    public init(op: Op) {
         Op = op
     }
 }
@@ -199,12 +199,12 @@ public final class Executable {
     /// Whether any instruction needs neighbouring lanes (derivatives, implicit-LOD lookups).
     public var UsesDerivatives = false
 
-    init(_ m: shader.Module) {
+    init(m: shader.Module) {
         Module = m
     }
 
     /// The uniform with a GL name, or nil.
-    public func FindUniform(_ name: string) -> Uniform? {
+    public func FindUniform(name: string) -> Uniform? {
         for u in Uniforms where u.Name == name { return u }
         return nil
     }

@@ -5,7 +5,7 @@ import (
 )
 
 extension Compiler {
-    func builtin(_ f: shader.Function, _ e: shader.Expr) throws -> int {
+    func builtin(f: shader.Function, e: shader.Expr) throws -> int {
         let t = e.Type
         let n = m.Slots(t)
         let args = e.Args
@@ -15,9 +15,9 @@ extension Compiler {
             if f == .modf && k == 1 { a.append(0); continue }
             a.append(try expr(x))
         }
-        func stride(_ k: int) -> int { m.Slots(args[k].Type) == 1 && n > 1 ? 0 : 1 }
+        func stride(k: int) -> int { m.Slots(args[k].Type) == 1 && n > 1 ? 0 : 1 }
         let d = temp(max(1, n))
-        func math(_ o: Op) {
+        func math(o: Op) {
             var i = Instr(o)
             i.N = n
             i.Dst = d

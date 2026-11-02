@@ -7,11 +7,11 @@ import (
 extension Printer {
     // MARK: statements
 
-    func stmts(_ list: [shader.Stmt]) throws {
+    func stmts(list: [shader.Stmt]) throws {
         for s in list { try stmt(s) }
     }
 
-    func stmt(_ s: shader.Stmt) throws {
+    func stmt(s: shader.Stmt) throws {
         switch s.Op {
         case .expr:
             line(try expr(s.Expr!) + ";")
@@ -90,7 +90,7 @@ extension Printer {
 
     // MARK: constants
 
-    func floatLiteral(_ bits: uint32) -> string {
+    func floatLiteral(bits: uint32) -> string {
         let f = float32(bitPattern: bits)
         if f.isNaN { return "NAN" }
         if f.isInfinite { return f > 0 ? "INFINITY" : "(-INFINITY)" }
@@ -98,7 +98,7 @@ extension Printer {
         return "as_type<float>(0x\(string(bits, radix: 16))u)"
     }
 
-    func scalarLiteral(_ k: shader.Kind, _ bits: uint32) -> string {
+    func scalarLiteral(k: shader.Kind, bits: uint32) -> string {
         switch k {
         case .float: return floatLiteral(bits)
         case .int: return "int(\(int32(bitPattern: bits)))"
@@ -107,7 +107,7 @@ extension Printer {
         }
     }
 
-    func constant(_ t: shader.DataType, _ v: [uint32]) throws -> string {
+    func constant(t: shader.DataType, v: [uint32]) throws -> string {
         if t.IsArray {
             let w = m.Slots(t.Element)
             var parts: [string] = []
@@ -141,7 +141,7 @@ extension Printer {
 
     // MARK: expressions
 
-    func expr(_ e: shader.Expr) throws -> string {
+    func expr(e: shader.Expr) throws -> string {
         switch e.Op {
         case .constant, .arrayLength:
             return try constant(e.Type, e.Value)
@@ -202,7 +202,7 @@ extension Printer {
         }
     }
 
-    func binary(_ b: shader.BinaryOp, _ e: shader.Expr) throws -> string {
+    func binary(b: shader.BinaryOp, e: shader.Expr) throws -> string {
         let l = e.Args[0]
         let r = e.Args[1]
         let a = try expr(l)
@@ -257,12 +257,12 @@ extension Printer {
     }
 
     /// `s` as a value of `t`'s shape, when it is a scalar used with a vector.
-    func widen(_ s: string, _ from: shader.DataType, _ to: shader.DataType) throws -> string {
+    func widen(s: string, from: shader.DataType, to: shader.DataType) throws -> string {
         if from.IsScalar && !to.IsScalar && to.IsVector { return "\(try type(to))(\(s))" }
         return s
     }
 
-    func helper(_ name: string, _ code: string) -> string {
+    func helper(name: string, code: string) -> string {
         if !helperNames.contains(name) {
             helperNames.append(name)
             helpers.append(code)
@@ -270,11 +270,11 @@ extension Printer {
         return name
     }
 
-    func builtin(_ f: shader.Function, _ e: shader.Expr) throws -> string {
+    func builtin(f: shader.Function, e: shader.Expr) throws -> string {
         let t = e.Type
         var a: [string] = []
         for x in e.Args where !x.Type.IsSampler { a.append(try expr(x)) }
-        func w(_ i: int) throws -> string {
+        func w(i: int) throws -> string {
             // Argument i, widened to the result's shape.
             let off = e.Args[0].Type.IsSampler ? 1 : 0
             return try widen(a[i], e.Args[i + off].Type, t)
@@ -376,7 +376,7 @@ extension Printer {
         }
     }
 
-    func samplerSlot(_ e: shader.Expr) throws -> SamplerSlot {
+    func samplerSlot(e: shader.Expr) throws -> SamplerSlot {
         guard e.Op == .variable, let s = samplers.first(where: { $0.Variable == e.Index }) else {
             throw TranslateError("a sampler that isn't a plain uniform")
         }
@@ -384,7 +384,7 @@ extension Printer {
     }
 
     /// Texture lookups. `a` holds the arguments after the sampler.
-    func texture(_ f: shader.Function, _ e: shader.Expr, _ a: [string]) throws -> string {
+    func texture(f: shader.Function, e: shader.Expr, a: [string]) throws -> string {
         let slot = try samplerSlot(e.Args[0])
         let k = slot.Kind
         let tex = "T.t\(slot.Slot)"
@@ -443,7 +443,7 @@ extension Printer {
 
     // MARK: constructors
 
-    func construct(_ e: shader.Expr) throws -> string {
+    func construct(e: shader.Expr) throws -> string {
         let t = e.Type
         var args: [string] = []
         for x in e.Args { args.append(try expr(x)) }
@@ -520,7 +520,7 @@ extension Printer {
         return "\(h)(\(args.joined(separator: ", ")))"
     }
 
-    func inverseHelper(_ n: int) -> string {
+    func inverseHelper(n: int) -> string {
         switch n {
         case 2:
             return "static float2x2 gl_inverse2(float2x2 m) { float d = determinant(m); return float2x2(float2(m[1][1], -m[0][1]), float2(-m[1][0], m[0][0])) * (1.0 / d); }\n"

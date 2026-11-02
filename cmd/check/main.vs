@@ -10,18 +10,18 @@ import (
 
 var failures = 0
 
-func check(_ ok: bool, _ what: string) {
+func check(ok: bool, what: string) {
     print(ok ? "ok    \(what)" : "FAIL  \(what)")
     if !ok { failures += 1 }
 }
 
-func compiles(_ src: string, _ stage: shader.Stage) -> shader.Module? {
+func compiles(src: string, stage: shader.Stage) -> shader.Module? {
     let r = glsl.Compile(src, stage: stage)
     if !r.Ok { print("      log: \(r.Log)") }
     return r.Module
 }
 
-func refuses(_ src: string, _ stage: shader.Stage, _ needle: string) -> bool {
+func refuses(src: string, stage: shader.Stage, needle: string) -> bool {
     let r = glsl.Compile(src, stage: stage)
     if r.Ok { return false }
     if !r.Log.contains(needle) { print("      log: \(r.Log)") }
@@ -115,12 +115,12 @@ func main() -> int32 {
     return failures == 0 ? 0 : 1
 }
 
-func exe(_ src: string, _ stage: shader.Stage) -> interp.Executable? {
+func exe(src: string, stage: shader.Stage) -> interp.Executable? {
     guard let m = compiles(src, stage) else { return nil }
     do { return try interp.Compile(m) } catch { print("      interp: \(error)"); return nil }
 }
 
-func near(_ a: float32, _ b: float32) -> bool { abs(a - b) <= 1e-5 * max(1, abs(b)) }
+func near(a: float32, b: float32) -> bool { abs(a - b) <= 1e-5 * max(1, abs(b)) }
 
 func checkInterp() {
     // A vertex shader: a matrix times a vector, per lane.

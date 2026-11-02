@@ -8,7 +8,7 @@ import (
 public struct CompileError: Error {
     public let Message: string
 
-    public init(_ message: string) {
+    public init(message: string) {
         Message = message
     }
 }
@@ -22,7 +22,7 @@ enum Place {
 }
 
 /// Compiles `m` for the interpreter.
-public func Compile(_ m: shader.Module) throws -> Executable {
+public func Compile(m: shader.Module) throws -> Executable {
     let c = Compiler(m)
     try c.run()
     return c.exe
@@ -42,7 +42,7 @@ final class Compiler {
     /// The function being inlined, innermost last: Module.Functions indices.
     var inlining: [int] = []
 
-    init(_ m: shader.Module) {
+    init(m: shader.Module) {
         self.m = m
         exe = Executable(m)
     }
@@ -69,7 +69,7 @@ final class Compiler {
         try inline(m.EntryPoint, args: [])
         // Constants were numbered from constBase; they live after every temporary.
         let first = maxTop
-        func reloc(_ s: int) -> int { s >= constBase ? s - constBase + first : s }
+        func reloc(s: int) -> int { s >= constBase ? s - constBase + first : s }
         for k in 0..<code.count {
             code[k].Dst = reloc(code[k].Dst)
             code[k].A = reloc(code[k].A)
@@ -114,7 +114,7 @@ final class Compiler {
     }
 
     /// GL's names for a uniform's parts: an array's elements, a struct's fields.
-    func flattenUniform(_ name: string, _ t: shader.DataType, _ offset: int) {
+    func flattenUniform(name: string, t: shader.DataType, offset: int) {
         if t.IsArray {
             let elem = t.Element
             let w = m.Slots(elem)
@@ -141,7 +141,7 @@ final class Compiler {
 
     // MARK: slots
 
-    func temp(_ n: int) -> int {
+    func temp(n: int) -> int {
         let o = top
         top += max(1, n)
         if top > maxTop { maxTop = top }
@@ -153,7 +153,7 @@ final class Compiler {
     let constBase = 1 << 24
     var constCount = 0
 
-    func constant(_ bits: [uint32]) -> int {
+    func constant(bits: [uint32]) -> int {
         let key = bits.map { string($0) }.joined(separator: ",")
         if let o = constantSlots[key] { return o }
         let o = constBase + constCount
@@ -163,12 +163,12 @@ final class Compiler {
         return o
     }
 
-    func emit(_ i: Instr) -> int {
+    func emit(i: Instr) -> int {
         code.append(i)
         return code.count - 1
     }
 
-    func op(_ o: Op, n: int, dst: int, a: int = 0, b: int = 0, c: int = 0, sa: int = 1, sb: int = 1, sc: int = 1) {
+    func op(o: Op, n: int, dst: int, a: int = 0, b: int = 0, c: int = 0, sa: int = 1, sb: int = 1, sc: int = 1) {
         var i = Instr(o)
         i.N = n
         i.Dst = dst
@@ -181,13 +181,13 @@ final class Compiler {
         _ = emit(i)
     }
 
-    func mov(_ dst: int, _ src: int, _ n: int, stride: int = 1) {
+    func mov(dst: int, src: int, n: int, stride: int = 1) {
         if dst == src && stride == 1 { return }
         op(.mov, n: n, dst: dst, a: src, sa: stride)
     }
 
     /// Runs `body` and frees the temporaries it took, keeping constants.
-    func scoped(_ body: () throws -> Void) rethrows {
+    func scoped(body: () throws -> Void) rethrows {
         let save = top
         try body()
         top = save
@@ -195,11 +195,11 @@ final class Compiler {
 
     // MARK: statements
 
-    func stmts(_ list: [shader.Stmt]) throws {
+    func stmts(list: [shader.Stmt]) throws {
         for s in list { try stmt(s) }
     }
 
-    func stmt(_ s: shader.Stmt) throws {
+    func stmt(s: shader.Stmt) throws {
         switch s.Op {
         case .expr:
             try scoped { _ = try expr(s.Expr!) }
@@ -313,7 +313,7 @@ final class Compiler {
 
     /// Inlines a call of Functions[f]: copies arguments in, runs the body,
     /// copies out parameters back. The result is in returnSlot[f].
-    func inline(_ f: int, args: [shader.Expr]) throws {
+    func inline(f: int, args: [shader.Expr]) throws {
         let fn = m.Functions[f]
         if inlining.contains(f) { throw CompileError("\(fn.Name) is recursive") }
         // Out arguments' places are found before the call.
@@ -341,7 +341,7 @@ final class Compiler {
 
     // MARK: places (lvalues)
 
-    func place(_ e: shader.Expr) throws -> Place {
+    func place(e: shader.Expr) throws -> Place {
         switch e.Op {
         case .variable:
             let o = offsets[e.Index]
@@ -389,7 +389,7 @@ final class Compiler {
         }
     }
 
-    func store(_ p: Place, _ value: int, _ n: int) {
+    func store(p: Place, value: int, n: int) {
         switch p {
         case .direct(let slots):
             var contiguous = true
@@ -424,7 +424,7 @@ final class Compiler {
     }
 
     /// Up to four small offsets, two bits each.
-    func packList(_ list: [int]) -> int {
+    func packList(list: [int]) -> int {
         var v = 0
         for (k, x) in list.enumerated() { v |= (x & 3) << (2 * k) }
         return v

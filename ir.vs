@@ -168,25 +168,25 @@ public final class Expr {
     /// bools as 0 or 1.
     public var Value: [uint32] = []
 
-    public init(_ op: ExprOp, _ type: DataType, _ args: [Expr] = []) {
+    public init(op: ExprOp, type: DataType, args: [Expr] = []) {
         Op = op
         Type = type
         Args = args
     }
 
     /// A constant of `type` from component bit patterns.
-    public static func Constant(_ type: DataType, _ bits: [uint32]) -> Expr {
+    public static func Constant(type: DataType, bits: [uint32]) -> Expr {
         let e = Expr(.constant, type)
         e.Value = bits
         return e
     }
 
-    public static func FloatConstant(_ v: float32) -> Expr { Constant(.Float, [v.bitPattern]) }
-    public static func IntConstant(_ v: int32) -> Expr { Constant(.Int, [uint32(bitPattern: v)]) }
-    public static func BoolConstant(_ v: bool) -> Expr { Constant(.Bool, [v ? 1 : 0]) }
+    public static func FloatConstant(v: float32) -> Expr { Constant(.Float, [v.bitPattern]) }
+    public static func IntConstant(v: int32) -> Expr { Constant(.Int, [uint32(bitPattern: v)]) }
+    public static func BoolConstant(v: bool) -> Expr { Constant(.Bool, [v ? 1 : 0]) }
 
     /// A reference to `v`.
-    public static func Ref(_ v: Variable) -> Expr {
+    public static func Ref(v: Variable) -> Expr {
         let e = Expr(.variable, v.Type)
         e.Index = v.Index
         return e
@@ -233,7 +233,7 @@ public final class Stmt {
     /// A switch's labels.
     public var Labels: [CaseLabel] = []
 
-    public init(_ op: StmtOp) {
+    public init(op: StmtOp) {
         Op = op
     }
 }
@@ -293,14 +293,14 @@ public final class Module {
     }
 
     /// Adds `v` and gives it its index.
-    public func Add(_ v: Variable) -> Variable {
+    public func Add(v: Variable) -> Variable {
         v.Index = Variables.count
         Variables.append(v)
         return v
     }
 
     /// The scalars one value of `t` holds, structs and arrays included.
-    public func Slots(_ t: DataType) -> int {
+    public func Slots(t: DataType) -> int {
         var one = t.Components
         if case .structure(let s) = t.Kind {
             one = 0
@@ -311,7 +311,7 @@ public final class Module {
     }
 
     /// Variables of a storage class, in declaration order.
-    public func VariablesIn(_ storage: Storage) -> [Variable] {
+    public func VariablesIn(storage: Storage) -> [Variable] {
         Variables.filter { $0.Storage == storage }
     }
 }

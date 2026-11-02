@@ -62,7 +62,7 @@ public struct DataType: Equatable {
     /// The element count of an array; 0 for a single value.
     public var ArrayCount: int
 
-    public init(_ kind: Kind, columns: int = 1, rows: int = 1, arrayCount: int = 0) {
+    public init(kind: Kind, columns: int = 1, rows: int = 1, arrayCount: int = 0) {
         Kind = kind
         Columns = columns
         Rows = rows
@@ -75,13 +75,13 @@ public struct DataType: Equatable {
     public static let Uint = DataType(.uint)
     public static let Float = DataType(.float)
 
-    public static func Vector(_ k: Kind, _ n: int) -> DataType { DataType(k, rows: n) }
+    public static func Vector(k: Kind, n: int) -> DataType { DataType(k, rows: n) }
     public static func Matrix(columns: int, rows: int) -> DataType { DataType(.float, columns: columns, rows: rows) }
 
     public var IsArray: bool { ArrayCount > 0 }
     /// The type of one element of an array; the type itself otherwise.
     public var Element: DataType { DataType(Kind, columns: Columns, rows: Rows) }
-    public func ArrayOf(_ n: int) -> DataType { DataType(Kind, columns: Columns, rows: Rows, arrayCount: n) }
+    public func ArrayOf(n: int) -> DataType { DataType(Kind, columns: Columns, rows: Rows, arrayCount: n) }
 
     public var IsScalar: bool { !IsArray && Columns == 1 && Rows == 1 && IsNumeric }
     public var IsVector: bool { !IsArray && Columns == 1 && Rows > 1 }

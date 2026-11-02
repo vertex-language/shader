@@ -56,7 +56,7 @@ final class Parser {
 
     // MARK: tokens
 
-    func peek(_ k: int = 0) -> Token {
+    func peek(k: int = 0) -> Token {
         let i = at + k
         return i < tokens.count ? tokens[i] : tokens[tokens.count - 1]
     }
@@ -67,12 +67,12 @@ final class Parser {
         return t
     }
 
-    func isNext(_ text: string) -> bool {
+    func isNext(text: string) -> bool {
         let t = peek()
         return t.Text == text && (t.Kind == .punct || t.Kind == .identifier)
     }
 
-    func accept(_ text: string) -> bool {
+    func accept(text: string) -> bool {
         if isNext(text) {
             at += 1
             return true
@@ -80,14 +80,14 @@ final class Parser {
         return false
     }
 
-    func expect(_ text: string) throws {
+    func expect(text: string) throws {
         if !accept(text) {
             let t = peek()
             throw CompileError(line: t.Line, "expected '\(text)', found '\(t.Kind == .end ? "end of file" : t.Text)'")
         }
     }
 
-    func fail(_ message: string) -> CompileError {
+    func fail(message: string) -> CompileError {
         CompileError(line: peek().Line, message)
     }
 
@@ -103,7 +103,7 @@ final class Parser {
 
     // MARK: scopes
 
-    func lookup(_ name: string) -> Symbol? {
+    func lookup(name: string) -> Symbol? {
         var i = scopes.count - 1
         while i >= 0 {
             if let s = scopes[i][name] { return s }
@@ -112,7 +112,7 @@ final class Parser {
         return nil
     }
 
-    func declare(_ name: string, _ s: Symbol) throws {
+    func declare(name: string, s: Symbol) throws {
         if scopes[scopes.count - 1][name] != nil {
             if case .functions = s {} else { throw fail("'\(name)' is already declared in this scope") }
         }
@@ -122,7 +122,7 @@ final class Parser {
     func push() { scopes.append([:]) }
     func pop() { scopes.removeLast() }
 
-    func variable(_ name: string, _ type: shader.DataType, _ storage: shader.Storage) -> shader.Variable {
+    func variable(name: string, type: shader.DataType, storage: shader.Storage) -> shader.Variable {
         module.Add(shader.Variable(name: name, type: type, storage: storage))
     }
 
@@ -148,7 +148,7 @@ final class Parser {
         return module
     }
 
-    func isCalled(_ f: shader.FunctionDef) -> bool {
+    func isCalled(f: shader.FunctionDef) -> bool {
         guard let idx = module.Functions.firstIndex(where: { $0 === f }) else { return false }
         return calls.contains(idx)
     }
@@ -156,7 +156,7 @@ final class Parser {
     var calls: [int] = []
 
     func declareBuiltins() {
-        func add(_ name: string, _ t: shader.DataType, _ b: shader.Builtin) {
+        func add(name: string, t: shader.DataType, b: shader.Builtin) {
             let v = variable(name, t, .builtin(b))
             scopes[0][name] = .variable(v)
         }
@@ -180,7 +180,7 @@ final class Parser {
                 add("gl_InstanceID", .Int, .instanceId)
             }
         }
-        func constant(_ name: string, _ v: int) {
+        func constant(name: string, v: int) {
             let c = variable(name, .Int, .constant)
             c.Value = [uint32(bitPattern: int32(v))]
             scopes[0][name] = .variable(c)
@@ -284,7 +284,7 @@ final class Parser {
     // MARK: types
 
     /// The type a type keyword names, or nil.
-    func typeKeyword(_ name: string) -> shader.DataType? {
+    func typeKeyword(name: string) -> shader.DataType? {
         switch name {
         case "void": return .Void
         case "float": return .Float
@@ -394,7 +394,7 @@ final class Parser {
 
     // MARK: declarations
 
-    func storage(_ q: Qualifiers, global: bool) throws -> shader.Storage {
+    func storage(q: Qualifiers, global: bool) throws -> shader.Storage {
         switch q.storage {
         case "const": return .constant
         case "uniform":
@@ -408,7 +408,7 @@ final class Parser {
         }
     }
 
-    func declarators(_ q: Qualifiers, _ base: shader.DataType, _ firstName: string, global: bool) throws {
+    func declarators(q: Qualifiers, base: shader.DataType, firstName: string, global: bool) throws {
         var name = firstName
         while true {
             var t = base
@@ -468,14 +468,14 @@ final class Parser {
     /// Declarations a statement made, for the statement list.
     var pendingDeclarations: [shader.Stmt] = []
 
-    func coerceForInit(_ e: shader.Expr, _ t: shader.DataType) throws -> shader.Expr {
+    func coerceForInit(e: shader.Expr, t: shader.DataType) throws -> shader.Expr {
         if e.Type != t { throw fail("can't initialize a \(describe(t)) with a \(describe(e.Type))") }
         return e
     }
 
     // MARK: functions
 
-    func functionDeclaration(_ q: Qualifiers, _ result: shader.DataType, _ name: string) throws {
+    func functionDeclaration(q: Qualifiers, result: shader.DataType, name: string) throws {
         if q.storage != "" && q.storage != "const" { throw fail("a function can't be \(q.storage)") }
         try expect("(")
         var paramTypes: [shader.DataType] = []
@@ -758,7 +758,7 @@ let keywords: [string] = [
 ]
 
 /// A type as GLSL spells it, for messages.
-func describe(_ t: shader.DataType) -> string {
+func describe(t: shader.DataType) -> string {
     var s = ""
     switch t.Kind {
     case .void: s = "void"

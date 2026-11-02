@@ -29,7 +29,7 @@ public struct Token {
     /// Whitespace came before it (for telling `#define F(x)` from `#define F (x)`).
     public let Spaced: bool
 
-    public init(_ kind: TokenKind, _ text: string, line: int, spaced: bool = false) {
+    public init(kind: TokenKind, text: string, line: int, spaced: bool = false) {
         Kind = kind
         Text = text
         Line = line
@@ -42,7 +42,7 @@ public struct CompileError: Error {
     public let Line: int
     public let Message: string
 
-    public init(line: int, _ message: string) {
+    public init(line: int, message: string) {
         Line = line
         Message = message
     }
@@ -57,20 +57,20 @@ let puncts2 = ["++", "--", "<=", ">=", "==", "!=", "&&", "||", "^^", "+=", "-=",
                "&=", "|=", "^=", "<<", ">>", "##"]
 let puncts1: [uint8] = Array("+-*/%<>=!&|^~?:;,.()[]{}#".utf8)
 
-func isDigit(_ c: uint8) -> bool { c >= 0x30 && c <= 0x39 }
-func isAlpha(_ c: uint8) -> bool { (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) || c == 0x5f }
-func isHex(_ c: uint8) -> bool { isDigit(c) || (c >= 0x41 && c <= 0x46) || (c >= 0x61 && c <= 0x66) }
+func isDigit(c: uint8) -> bool { c >= 0x30 && c <= 0x39 }
+func isAlpha(c: uint8) -> bool { (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) || c == 0x5f }
+func isHex(c: uint8) -> bool { isDigit(c) || (c >= 0x41 && c <= 0x46) || (c >= 0x61 && c <= 0x66) }
 
 /// Splits source into tokens, newlines kept. Comments become a space
 /// (a block comment's newlines still end lines), and a backslash before a
 /// newline joins two lines.
-func lex(_ source: string) throws -> [Token] {
+func lex(source: string) throws -> [Token] {
     let b = Array(source.utf8)
     var out: [Token] = []
     var i = 0
     var line = 1
     var spaced = true
-    func text(_ from: int, _ to: int) -> string { string(decoding: b[from..<to], as: UTF8.self) }
+    func text(from: int, to: int) -> string { string(decoding: b[from..<to], as: UTF8.self) }
     while i < b.count {
         let c = b[i]
         if c == 0x0A {

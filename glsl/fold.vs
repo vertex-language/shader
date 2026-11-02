@@ -9,20 +9,20 @@ import (
 // for array sizes, `const` variables and (in 1.00) global initializers.
 // Values are component bit patterns, as shader.Expr.Value holds them.
 
-func f32(_ bits: uint32) -> float32 { float32(bitPattern: bits) }
-func bitsOf(_ f: float32) -> uint32 { f.bitPattern }
-func i32(_ bits: uint32) -> int32 { int32(bitPattern: bits) }
-func bitsOfInt(_ i: int32) -> uint32 { uint32(bitPattern: i) }
+func f32(bits: uint32) -> float32 { float32(bitPattern: bits) }
+func bitsOf(f: float32) -> uint32 { f.bitPattern }
+func i32(bits: uint32) -> int32 { int32(bitPattern: bits) }
+func bitsOfInt(i: int32) -> uint32 { uint32(bitPattern: i) }
 
 /// The value of a constant operand, `n` components wide: a scalar spreads.
-func spread(_ e: shader.Expr, _ n: int) -> [uint32] {
+func spread(e: shader.Expr, n: int) -> [uint32] {
     if e.Value.count == n { return e.Value }
     if e.Value.count == 1 { return [uint32](repeating: e.Value[0], count: n) }
     return e.Value
 }
 
 /// Folds `e` if its operands are constants; returns it unchanged otherwise.
-func fold(_ e: shader.Expr) -> shader.Expr {
+func fold(e: shader.Expr) -> shader.Expr {
     for a in e.Args where !a.IsConstant { return e }
     let t = e.Type
     switch e.Op {
@@ -78,7 +78,7 @@ func fold(_ e: shader.Expr) -> shader.Expr {
     }
 }
 
-func foldScalar(_ op: shader.BinaryOp, _ kind: shader.Kind, _ x: uint32, _ y: uint32) -> uint32? {
+func foldScalar(op: shader.BinaryOp, kind: shader.Kind, x: uint32, y: uint32) -> uint32? {
     switch kind {
     case .float:
         let a = f32(x)
@@ -145,7 +145,7 @@ func foldScalar(_ op: shader.BinaryOp, _ kind: shader.Kind, _ x: uint32, _ y: ui
 }
 
 /// One component converted from `from` to `to`.
-func convertScalar(_ bits: uint32, from: shader.Kind, to: shader.Kind) -> uint32 {
+func convertScalar(bits: uint32, from: shader.Kind, to: shader.Kind) -> uint32 {
     if from == to { return bits }
     switch to {
     case .float:
@@ -182,7 +182,7 @@ func convertScalar(_ bits: uint32, from: shader.Kind, to: shader.Kind) -> uint32
 
 /// The components a constructor of `t` makes from constant arguments, or
 /// nil when it can't tell (structs, arrays).
-func constructValue(_ t: shader.DataType, _ args: [shader.Expr]) -> [uint32]? {
+func constructValue(t: shader.DataType, args: [shader.Expr]) -> [uint32]? {
     if !t.IsNumeric || t.IsArray { return nil }
     let n = t.Components
     // One scalar: a vector spreads it; a matrix puts it on the diagonal.
@@ -219,7 +219,7 @@ func constructValue(_ t: shader.DataType, _ args: [shader.Expr]) -> [uint32]? {
 }
 
 /// A float literal's value: decimal digits, optional exponent, optional f.
-func parseFloatLiteral(_ text: string) -> float32? {
+func parseFloatLiteral(text: string) -> float32? {
     var t = text
     if t.hasSuffix("f") || t.hasSuffix("F") { t = string(t.dropLast()) }
     if let d = float64(t) { return float32(d) }

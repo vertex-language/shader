@@ -7,7 +7,7 @@ import (
 extension Compiler {
     /// Compiles `e`; returns the first slot of its value (a variable's own
     /// slots when it is one, else temporaries).
-    func expr(_ e: shader.Expr) throws -> int {
+    func expr(e: shader.Expr) throws -> int {
         let t = e.Type
         let n = m.Slots(t)
         switch e.Op {
@@ -123,7 +123,7 @@ extension Compiler {
         }
     }
 
-    func copy(_ src: int, _ n: int) -> int {
+    func copy(src: int, n: int) -> int {
         let d = temp(n)
         mov(d, src, n)
         return d
@@ -131,7 +131,7 @@ extension Compiler {
 
     /// Whether an expression's value might be read from a variable's own
     /// slots (so writing that variable first would change it).
-    func aliases(_ e: shader.Expr) -> bool {
+    func aliases(e: shader.Expr) -> bool {
         switch e.Op {
         case .variable, .swizzle, .field, .index: return true
         default: return false
@@ -140,7 +140,7 @@ extension Compiler {
 
     // MARK: operators
 
-    func binary(_ b: shader.BinaryOp, _ e: shader.Expr) throws -> int {
+    func binary(b: shader.BinaryOp, e: shader.Expr) throws -> int {
         let l = e.Args[0]
         let r = e.Args[1]
         let t = e.Type
@@ -224,7 +224,7 @@ extension Compiler {
 
     // MARK: constructors
 
-    func conversion(_ from: shader.Kind, _ to: shader.Kind) -> Op {
+    func conversion(from: shader.Kind, to: shader.Kind) -> Op {
         switch to {
         case .float:
             switch from {
@@ -249,7 +249,7 @@ extension Compiler {
         }
     }
 
-    func construct(_ e: shader.Expr) throws -> int {
+    func construct(e: shader.Expr) throws -> int {
         let t = e.Type
         let n = m.Slots(t)
         let d = temp(n)

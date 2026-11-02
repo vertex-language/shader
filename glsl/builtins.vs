@@ -11,25 +11,25 @@ struct Resolved {
 }
 
 /// float, vec2, vec3 or vec4 (GLSL's genType).
-func isGenFloat(_ t: shader.DataType) -> bool { t.IsFloat && !t.IsArray && t.Columns == 1 }
+func isGenFloat(t: shader.DataType) -> bool { t.IsFloat && !t.IsArray && t.Columns == 1 }
 /// int or ivecN (genIType).
-func isGenInt(_ t: shader.DataType) -> bool { t.Kind == .int && !t.IsArray && t.Columns == 1 }
+func isGenInt(t: shader.DataType) -> bool { t.Kind == .int && !t.IsArray && t.Columns == 1 }
 /// uint or uvecN (genUType).
-func isGenUint(_ t: shader.DataType) -> bool { t.Kind == .uint && !t.IsArray && t.Columns == 1 }
+func isGenUint(t: shader.DataType) -> bool { t.Kind == .uint && !t.IsArray && t.Columns == 1 }
 /// bool or bvecN (genBType).
-func isGenBool(_ t: shader.DataType) -> bool { t.Kind == .bool && !t.IsArray && t.Columns == 1 }
-func isFloatScalar(_ t: shader.DataType) -> bool { t == shader.DataType.Float }
-func isVectorOf(_ t: shader.DataType, _ k: shader.Kind) -> bool { t.Kind == k && t.IsVector }
+func isGenBool(t: shader.DataType) -> bool { t.Kind == .bool && !t.IsArray && t.Columns == 1 }
+func isFloatScalar(t: shader.DataType) -> bool { t == shader.DataType.Float }
+func isVectorOf(t: shader.DataType, k: shader.Kind) -> bool { t.Kind == k && t.IsVector }
 
 /// The sampler kind of a sampler type, and whether it's a sampler at all.
-func samplerOf(_ t: shader.DataType) -> shader.SamplerKind? {
+func samplerOf(t: shader.DataType) -> shader.SamplerKind? {
     if t.IsArray { return nil }
     if case .sampler(let k) = t.Kind { return k }
     return nil
 }
 
 /// The coordinate width a sampler's lookups take (before projection).
-func coordWidth(_ k: shader.SamplerKind) -> int {
+func coordWidth(k: shader.SamplerKind) -> int {
     switch k {
     case .texture2D, .external, .itexture2D, .utexture2D: return 2
     case .texture3D, .cube, .array2D, .shadow2D: return 3
@@ -38,7 +38,7 @@ func coordWidth(_ k: shader.SamplerKind) -> int {
 }
 
 /// What a lookup through a sampler returns.
-func lookupResult(_ k: shader.SamplerKind) -> shader.DataType {
+func lookupResult(k: shader.SamplerKind) -> shader.DataType {
     switch k {
     case .shadow2D, .shadowCube, .shadowArray2D: return .Float
     case .itexture2D: return shader.DataType.Vector(.int, 4)
@@ -49,16 +49,16 @@ func lookupResult(_ k: shader.SamplerKind) -> shader.DataType {
 
 /// Resolves a call of a built-in function, or nil when `name` isn't one
 /// or no overload takes these arguments.
-func resolveBuiltin(_ name: string, _ a: [shader.DataType], fragment: bool, version: int, extensions: [string]) -> Resolved? {
+func resolveBuiltin(name: string, a: [shader.DataType], fragment: bool, version: int, extensions: [string]) -> Resolved? {
     let es3 = version >= 300
     let n = a.count
-    func same(_ k: int) -> bool { for i in 1..<k { if a[i] != a[0] { return false } }; return true }
-    func gen(_ fn: shader.Function) -> Resolved? {
+    func same(k: int) -> bool { for i in 1..<k { if a[i] != a[0] { return false } }; return true }
+    func gen(fn: shader.Function) -> Resolved? {
         // One genType argument; the result has its type.
         if n == 1 && isGenFloat(a[0]) { return Resolved(Fn: fn, Result: a[0]) }
         return nil
     }
-    func gen2(_ fn: shader.Function) -> Resolved? {
+    func gen2(fn: shader.Function) -> Resolved? {
         if n == 2 && isGenFloat(a[0]) && a[1] == a[0] { return Resolved(Fn: fn, Result: a[0]) }
         return nil
     }
@@ -226,13 +226,13 @@ func resolveBuiltin(_ name: string, _ a: [shader.DataType], fragment: bool, vers
 
 /// The texture lookups: GLSL ES 1.00's texture2D, textureCube … and
 /// 3.00's overloaded texture, textureLod ….
-func resolveTexture(_ name: string, _ a: [shader.DataType], fragment: bool, version: int, extensions: [string]) -> Resolved? {
+func resolveTexture(name: string, a: [shader.DataType], fragment: bool, version: int, extensions: [string]) -> Resolved? {
     if a.isEmpty { return nil }
     guard let k = samplerOf(a[0]) else { return nil }
     let n = a.count
     let w = coordWidth(k)
     let result = lookupResult(k)
-    func coord(_ t: shader.DataType, _ width: int) -> bool {
+    func coord(t: shader.DataType, width: int) -> bool {
         t.IsFloat && !t.IsArray && t.Columns == 1 && t.Rows == width
     }
     let es3 = version >= 300

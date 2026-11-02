@@ -19,7 +19,7 @@ import (
 public struct TranslateError: Error {
     public let Message: string
 
-    public init(_ message: string) {
+    public init(message: string) {
         Message = message
     }
 }
@@ -59,7 +59,7 @@ public let ConstantsCount = 4
 /// Prints `m`. `offsets` are each variable's first uniform slot (the
 /// interpreter's Executable.Offsets); `attributes` each vertex input's
 /// attribute location, by Module.Variables index (vertex stage only).
-public func Translate(_ m: shader.Module, offsets: [int], attributes: [int: int]) throws -> Source {
+public func Translate(m: shader.Module, offsets: [int], attributes: [int: int]) throws -> Source {
     let p = Printer(m, offsets: offsets, attributes: attributes)
     return try p.run()
 }
@@ -75,7 +75,7 @@ final class Printer {
     var indent = 1
     let vertex: bool
 
-    init(_ m: shader.Module, offsets: [int], attributes: [int: int]) {
+    init(m: shader.Module, offsets: [int], attributes: [int: int]) {
         self.m = m
         self.offsets = offsets
         self.attributes = attributes
@@ -84,7 +84,7 @@ final class Printer {
 
     // MARK: names and types
 
-    func name(_ v: shader.Variable) -> string {
+    func name(v: shader.Variable) -> string {
         if case .builtin = v.Storage { return "G.\(builtinName(v))" }
         let n = "v\(v.Index)_\(clean(v.Name))"
         switch v.Storage {
@@ -94,12 +94,12 @@ final class Printer {
         }
     }
 
-    func fieldName(_ v: shader.Variable) -> string {
+    func fieldName(v: shader.Variable) -> string {
         if case .builtin = v.Storage { return builtinName(v) }
         return "v\(v.Index)_\(clean(v.Name))"
     }
 
-    func builtinName(_ v: shader.Variable) -> string {
+    func builtinName(v: shader.Variable) -> string {
         guard case .builtin(let b) = v.Storage else { return v.Name }
         switch b {
         case .position: return "b_position"
@@ -118,7 +118,7 @@ final class Printer {
     }
 
     /// Letters, digits and underscores only.
-    func clean(_ s: string) -> string {
+    func clean(s: string) -> string {
         var b: [uint8] = []
         for c in s.utf8 {
             if (c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) || c == 0x5f { b.append(c) } else { b.append(0x5f) }
@@ -126,7 +126,7 @@ final class Printer {
         return string(decoding: b, as: UTF8.self)
     }
 
-    func scalarName(_ k: shader.Kind) -> string {
+    func scalarName(k: shader.Kind) -> string {
         switch k {
         case .bool: return "bool"
         case .int: return "int"
@@ -137,7 +137,7 @@ final class Printer {
     }
 
     /// One element's Metal type (no array).
-    func elemType(_ t: shader.DataType) throws -> string {
+    func elemType(t: shader.DataType) throws -> string {
         switch t.Kind {
         case .void: return "void"
         case .structure(let s): return "S\(s)"
@@ -150,14 +150,14 @@ final class Printer {
         }
     }
 
-    func type(_ t: shader.DataType) throws -> string {
+    func type(t: shader.DataType) throws -> string {
         let e = try elemType(t)
         return t.IsArray ? "garray<\(e), \(t.ArrayCount)>" : e
     }
 
     // MARK: the program
 
-    func line(_ s: string) {
+    func line(s: string) {
         out += string(repeating: "    ", count: indent) + s + "\n"
     }
 
@@ -218,7 +218,7 @@ final class Printer {
         return Source(Text: text, Entry: vertex ? "vmain" : "fmain", Samplers: samplers)
     }
 
-    func textureType(_ k: shader.SamplerKind) -> string {
+    func textureType(k: shader.SamplerKind) -> string {
         switch k {
         case .cube: return "texturecube<float>"
         case .texture3D: return "texture3d<float>"
@@ -232,7 +232,7 @@ final class Printer {
         }
     }
 
-    func signature(_ k: int, _ f: shader.FunctionDef) throws -> string {
+    func signature(k: int, f: shader.FunctionDef) throws -> string {
         var params = ["thread Globals& G", "thread Tex& T"]
         for (i, p) in f.Params.enumerated() {
             let v = m.Variables[p]
@@ -348,9 +348,9 @@ final class Printer {
         return s
     }
 
-    func isWritten(_ v: shader.Variable) -> bool { true }
+    func isWritten(v: shader.Variable) -> bool { true }
 
-    func convertColor(_ e: string, _ t: shader.DataType) throws -> string {
+    func convertColor(e: string, t: shader.DataType) throws -> string {
         if t.IsFloat && t.Rows == 4 { return e }
         if t.IsFloat && t.Rows == 3 { return "float4(\(e), 1.0)" }
         if t.IsFloat && t.Rows == 2 { return "float4(\(e), 0.0, 1.0)" }
@@ -358,12 +358,12 @@ final class Printer {
         throw TranslateError("an integer color output")
     }
 
-    func isBuiltin(_ v: shader.Variable, _ b: shader.Builtin) -> bool {
+    func isBuiltin(v: shader.Variable, b: shader.Builtin) -> bool {
         if case .builtin(let x) = v.Storage { return x == b }
         return false
     }
 
-    func varying(_ v: shader.Variable) throws -> string {
+    func varying(v: shader.Variable) throws -> string {
         if v.Type.IsArray || v.Type.IsStruct || v.Type.IsMatrix { throw TranslateError("varying \(v.Name) of an array, struct or matrix type") }
         let flat = v.Flat || v.Type.IsIntegral ? " [[flat]]" : ""
         return "    \(try type(v.Type)) \(fieldName(v)) [[user(\(clean(v.Name)))]]\(flat);\n"
@@ -381,13 +381,13 @@ final class Printer {
     /// not copied in when the stage starts: arrays of numbers, vectors and
     /// matrices (a bone palette copied for every vertex is most of a
     /// skinned draw's time).
-    func lazy(_ v: shader.Variable) -> bool {
+    func lazy(v: shader.Variable) -> bool {
         return v.Storage == .uniform && v.Type.IsArray && !v.Type.IsSampler && !v.Type.Element.IsStruct
     }
 
     /// The name of a helper reading lazy uniform v's element i from U
     /// (whole: the whole array).
-    func lazyHelper(_ v: shader.Variable, whole: bool) throws -> string {
+    func lazyHelper(v: shader.Variable, whole: bool) throws -> string {
         let n = "u\(whole ? "all" : "at")\(v.Index)"
         if helperNames.contains(n) { return n }
         helperNames.append(n)
@@ -413,7 +413,7 @@ final class Printer {
 
     /// Code that loads a uniform of `t` at slot `o` into `dst` (slot
     /// `base + o` when base names a variable holding one).
-    func loadUniform(_ dst: string, _ t: shader.DataType, _ o: int, indent ind: string, base: string = "") throws -> string {
+    func loadUniform(dst: string, t: shader.DataType, o: int, indent ind: string, base: string = "") throws -> string {
         if t.IsArray {
             var s = ""
             let w = m.Slots(t.Element)
@@ -429,7 +429,7 @@ final class Printer {
             }
             return s
         }
-        func comp(_ i: int) -> string {
+        func comp(i: int) -> string {
             let at = base.isEmpty ? "\(o + i)" : "\(base) + \(o + i)"
             switch t.Kind {
             case .float: return "as_type<float>(U[\(at)])"
